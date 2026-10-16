@@ -11,15 +11,21 @@
 
 *Breaking vulnerable programs to understand how to build safer ones.*
 
+<br>
+
+<img src="assets/rainfall-demo.gif" alt="Animated RainFall binary-analysis terminal" width="100%">
+
 </div>
 
 ---
 
 ## About the project
 
-**RainFall** is an offensive security project from the 42 curriculum. It consists of auditing a series of deliberately vulnerable x86-64 ELF binaries, understanding their behaviour and exploiting each flaw to progress through **11 increasingly difficult levels**.
+**RainFall** is an offensive security project from the 42 curriculum. It places the student inside a dedicated Linux virtual machine containing a chain of deliberately vulnerable x86-64 ELF programs. The goal is to understand exactly how each program handles data and privileges, then turn one implementation flaw into controlled execution.
 
-The project goes beyond writing exploits: it develops the ability to investigate unfamiliar software, reason from low-level evidence and clearly explain complex technical findings.
+Each challenge runs under a restricted `levelXX` account. Its target binary has the **SUID** permission and belongs to a more privileged `flagXX` account. A successful exploit makes the vulnerable program perform an action with its owner's privileges, allowing the next credential to be recovered and the following level to be unlocked.
+
+This creates a complete security-audit loop: inspect an unknown binary, reconstruct its behaviour, identify the trust boundary it violates, build a reliable proof of concept and explain why it works. Progress depends on understanding the vulnerability—not on guessing or brute force.
 
 > All exercises are performed inside an isolated and authorised virtual machine designed for educational purposes.
 
@@ -34,6 +40,34 @@ The project goes beyond writing exploits: it develops the ability to investigate
 | **Environment** | Linux, SSH and VirtualBox |
 | **Key outcome** | A repeatable security analysis methodology |
 
+## How the project works
+
+```text
+SSH into level00
+       │
+       ▼
+Inspect the level's SUID binary
+       │
+       ▼
+Reverse its logic and memory layout
+       │
+       ▼
+Identify a controllable vulnerability
+       │
+       ▼
+Build and validate an exploit
+       │
+       ▼
+Execute in the flagXX security context
+       │
+       ▼
+Recover the next SSH credential ──────► Repeat through level10
+```
+
+The progression is intentionally cumulative. Early levels teach how user-controlled input reaches memory; later levels require several observations and exploitation primitives to be combined while protections are active.
+
+For every stage, the result must be reproducible and defensible during a peer evaluation. It is not enough for a payload to work: every offset, address, register transition and side effect must be understood.
+
 ## What this project demonstrates
 
 - Reverse engineering unfamiliar binaries, with or without source code
@@ -46,6 +80,8 @@ The project goes beyond writing exploits: it develops the ability to investigate
 
 ## Technical scope
 
+The mandatory path contains **11 levels, from `level00` to `level10`**. Five harder bonus challenges extend the project with additional heap and mitigation-bypass techniques.
+
 The challenges cover a broad range of binary exploitation concepts:
 
 ```text
@@ -57,7 +93,18 @@ Runtime analysis           Address leaks · Offset calculation · Calling conven
 Mitigation bypasses        NX · Stack canaries · ASLR · RELRO · PIE
 ```
 
-The final mandatory challenge combines several mitigations at once. Solving it requires chaining multiple primitives: leaking runtime data, preserving the stack canary and rebuilding a libc-relative ROP chain before taking control of the execution flow.
+### Increasing difficulty
+
+| Stage | Main learning objective |
+| --- | --- |
+| Foundations | Recognise unsafe input handling and understand stack layout |
+| Exploitation primitives | Turn memory corruption or uncontrolled formatting into useful reads, writes or control-flow changes |
+| Code reuse | Redirect execution through existing functions or instruction sequences when injected code cannot run |
+| Runtime uncertainty | Leak addresses and calculate targets dynamically instead of relying on fixed locations |
+| Final challenge | Chain several primitives while NX, stack canaries and ASLR are enabled together |
+| Bonus path | Explore heap corruption, use-after-free, PIE bypasses and dynamic-resolver abuse |
+
+The final mandatory challenge cannot be solved with a single weakness. It requires leaking runtime information, defeating the canary and rebuilding a libc-relative ROP chain before control of execution can be obtained.
 
 ## Analysis workflow
 
@@ -92,7 +139,7 @@ flowchart LR
 
 ## Deliverables
 
-Each level is documented independently so that the reasoning remains easy to review and present:
+The project specification requires each solved level to be documented independently so that the reasoning remains easy to review and present:
 
 ```text
 levelXX/
@@ -102,7 +149,9 @@ levelXX/
     └── scripts and supporting material
 ```
 
-Vulnerable binaries are intentionally excluded from the repository. They are inspected exclusively inside the virtual machine supplied with the project.
+The `flag` file records proof of progression. The `resources/` directory contains the analysis, payload-generation scripts and any supporting files needed to reproduce the solution. Vulnerable binaries are intentionally excluded from the repository and are inspected exclusively inside the supplied virtual machine.
+
+This separation keeps the repository focused on the **reasoning and reproducibility** of the work rather than distributing the challenge binaries themselves.
 
 ## Professional takeaways
 
