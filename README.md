@@ -1,87 +1,129 @@
-# RainFall
+<div align="center">
 
-> Reverse engineering et exploitation de binaires ELF x86-64 dans un environnement contrôlé.
+# 🌧️ RainFall
 
-RainFall est un projet de cybersécurité offensive réalisé dans le cadre du cursus de l'École 42. L'objectif est d'auditer une série de programmes volontairement vulnérables, de comprendre précisément leur comportement puis d'exploiter leurs failles afin de progresser d'un niveau au suivant.
+### Binary exploitation · Reverse engineering · x86-64 security
 
-Au-delà de l'exploitation, ce projet développe une compétence essentielle en sécurité applicative : savoir identifier les hypothèses dangereuses dans un programme pour ensuite écrire du code plus robuste.
+[![School](https://img.shields.io/badge/School-42-000000?style=for-the-badge&logo=42)](https://42.fr/)
+![Language](https://img.shields.io/badge/Language-Assembly_%26_C-00599C?style=for-the-badge&logo=c)
+![Platform](https://img.shields.io/badge/Platform-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
+![Security](https://img.shields.io/badge/Field-Offensive_Security-CB2D3E?style=for-the-badge)
 
-## Ce que ce projet démontre
+*Breaking vulnerable programs to understand how to build safer ones.*
 
-- Analyse méthodique d'un programme sans documentation préalable
-- Lecture de code assembleur et compréhension de la mémoire d'un processus
-- Identification de vulnérabilités et construction de preuves de concept reproductibles
-- Adaptation d'une stratégie face aux mécanismes modernes de protection
-- Documentation claire d'un raisonnement technique complexe
-- Persévérance, autonomie et collaboration dans la résolution de problèmes
+</div>
 
-## Périmètre technique
+---
 
-Le parcours principal comprend **11 niveaux**, chacun centré sur une faiblesse ou une technique d'exploitation différente :
+## About the project
 
-- dépassements de tampon sur la pile ;
-- erreurs *off-by-one* et dépassements d'entiers ;
-- vulnérabilités de chaînes de format ;
-- corruption de mémoire sur la pile et le tas ;
-- détournement du flot d'exécution ;
-- *Return-Oriented Programming* et `ret2libc` ;
-- fuites d'adresses et calculs d'offsets à l'exécution ;
-- contournement de protections telles que **NX**, **stack canaries**, **ASLR**, **RELRO** et **PIE**.
+**RainFall** is an offensive security project from the 42 curriculum. It consists of auditing a series of deliberately vulnerable x86-64 ELF binaries, understanding their behaviour and exploiting each flaw to progress through **11 increasingly difficult levels**.
 
-Le dernier niveau obligatoire combine plusieurs de ces protections et impose de chaîner différentes primitives d'exploitation dans une même solution.
+The project goes beyond writing exploits: it develops the ability to investigate unfamiliar software, reason from low-level evidence and clearly explain complex technical findings.
 
-## Démarche suivie
+> All exercises are performed inside an isolated and authorised virtual machine designed for educational purposes.
 
-Pour chaque binaire, l'analyse suit une méthode reproductible :
+## At a glance
 
-1. **Reconnaissance** — identification du format, de l'architecture, des symboles et des protections actives.
-2. **Analyse statique** — désassemblage et reconstitution de la logique du programme.
-3. **Analyse dynamique** — observation des registres, de la pile, du tas et du flot d'exécution.
-4. **Identification de la faille** — validation de la primitive disponible et de ses contraintes.
-5. **Exploitation** — construction d'une preuve de concept minimale et fiable.
-6. **Documentation** — explication de la vulnérabilité, de la stratégie et des mesures correctives possibles.
-
-## Outils et environnement
-
-| Domaine | Outils / notions |
+| | |
 | --- | --- |
-| Analyse statique | `objdump`, `readelf`, `nm`, assembleur x86-64 |
-| Débogage | `gdb`, inspection des registres et de la mémoire |
-| Sécurité binaire | `checksec`, ELF, SUID, conventions d'appel |
-| Exploitation | ROP, `ret2libc`, format strings, stack/heap corruption |
-| Automatisation | Shell, scripts de génération de charges utiles |
-| Environnement | Linux, SSH, machine virtuelle VirtualBox |
+| **Objective** | Identify and exploit vulnerabilities in ELF binaries |
+| **Architecture** | x86-64 on Linux |
+| **Scope** | 11 mandatory levels and 5 optional challenges |
+| **Approach** | Static analysis, dynamic debugging and exploit development |
+| **Environment** | Linux, SSH and VirtualBox |
+| **Key outcome** | A repeatable security analysis methodology |
 
-## Organisation des livrables
+## What this project demonstrates
 
-Chaque niveau est documenté séparément afin de rendre l'analyse vérifiable et facile à présenter :
+- Reverse engineering unfamiliar binaries, with or without source code
+- Reading assembly and understanding process memory
+- Finding vulnerabilities and measuring their real impact
+- Building minimal, reliable and reproducible proofs of concept
+- Adapting an exploit to modern binary protections
+- Documenting and presenting a complex technical investigation
+- Working autonomously while collaborating effectively when needed
+
+## Technical scope
+
+The challenges cover a broad range of binary exploitation concepts:
+
+```text
+Memory corruption          Stack overflows · Off-by-one errors · Heap corruption
+Control-flow hijacking     Return address overwrite · Stack pivoting
+Code reuse                 ret2libc · Return-Oriented Programming
+Data manipulation          Format-string leaks and writes · Integer overflows
+Runtime analysis           Address leaks · Offset calculation · Calling conventions
+Mitigation bypasses        NX · Stack canaries · ASLR · RELRO · PIE
+```
+
+The final mandatory challenge combines several mitigations at once. Solving it requires chaining multiple primitives: leaking runtime data, preserving the stack canary and rebuilding a libc-relative ROP chain before taking control of the execution flow.
+
+## Analysis workflow
+
+Every binary is approached through the same evidence-based process:
+
+```mermaid
+flowchart LR
+    A[Reconnaissance] --> B[Static analysis]
+    B --> C[Dynamic analysis]
+    C --> D[Vulnerability]
+    D --> E[Proof of concept]
+    E --> F[Documentation]
+```
+
+1. **Reconnaissance** — identify the file format, architecture, symbols and active protections.
+2. **Static analysis** — disassemble the binary and reconstruct its intended logic.
+3. **Dynamic analysis** — inspect registers, stack, heap and execution flow at runtime.
+4. **Vulnerability assessment** — validate the available primitive and its constraints.
+5. **Exploitation** — create the smallest reliable proof of concept.
+6. **Documentation** — explain the root cause, exploitation strategy and possible remediation.
+
+## Tools and technologies
+
+| Area | Tools and concepts |
+| --- | --- |
+| Static analysis | `objdump`, `readelf`, `nm`, x86-64 assembly |
+| Dynamic analysis | `gdb`, breakpoints, registers and memory inspection |
+| Binary security | `checksec`, ELF, SUID and calling conventions |
+| Exploitation | ROP, `ret2libc`, format strings and memory corruption |
+| Automation | Shell scripting and payload generation |
+| Infrastructure | Linux, SSH and VirtualBox |
+
+## Deliverables
+
+Each level is documented independently so that the reasoning remains easy to review and present:
 
 ```text
 levelXX/
 ├── flag
 └── resources/
     ├── walkthrough.md
-    └── scripts et ressources utiles
+    └── scripts and supporting material
 ```
 
-Les binaires vulnérables ne sont pas versionnés. Ils sont analysés exclusivement dans la machine virtuelle fournie avec le projet.
+Vulnerable binaries are intentionally excluded from the repository. They are inspected exclusively inside the virtual machine supplied with the project.
 
-## Compétences transférables
+## Professional takeaways
 
-L'intérêt professionnel de RainFall dépasse le cadre du pentest. Le projet renforce la capacité à :
+RainFall strengthened skills that apply well beyond penetration testing:
 
-- diagnostiquer un comportement bas niveau difficile à reproduire ;
-- raisonner à partir de faits observables plutôt que d'hypothèses ;
-- mesurer l'impact réel d'une vulnérabilité ;
-- expliquer une chaîne de causes techniques à différents interlocuteurs ;
-- intégrer les réflexes de sécurité dès la conception et la revue de code.
+- debugging low-level and difficult-to-reproduce behaviour;
+- distinguishing verified facts from assumptions;
+- tracing a security issue from root cause to practical impact;
+- communicating technical risks to different audiences;
+- applying secure-development principles during implementation and code review.
 
-## Cadre éthique
+## Ethical use
 
-Toutes les manipulations présentées dans ce projet sont réalisées sur des programmes intentionnellement vulnérables, au sein d'un environnement isolé et autorisé à des fins pédagogiques. Les techniques décrites ne doivent être utilisées que sur des systèmes pour lesquels une autorisation explicite a été accordée.
+The techniques covered here must only be used against systems for which explicit authorisation has been granted. This repository documents work carried out on intentionally vulnerable programs in a controlled educational environment.
 
-## À propos
+---
 
-Projet du cursus **42** — catégorie *cybersécurité offensive / exploitation binaire*.
+<div align="center">
 
-Pour découvrir mes autres projets : [profil GitHub](https://github.com/Zibgame).
+**42 curriculum · Offensive security · Binary exploitation**
+
+[Explore my other projects](https://github.com/Zibgame)
+
+</div>
