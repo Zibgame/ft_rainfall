@@ -13,7 +13,7 @@
 
 <br>
 
-<img src="assets/rainfall-demo.gif" alt="Animated RainFall binary-analysis terminal" width="100%">
+<img src="assets/rainfall-demo.gif" alt="Rain falling over a RainFall binary-analysis terminal" width="100%">
 
 </div>
 
