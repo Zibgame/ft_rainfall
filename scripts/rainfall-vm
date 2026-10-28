@@ -1,0 +1,336 @@
+#!/bin/sh
+
+# Small VirtualBox manager for the 42 RainFall appliance.
+# It intentionally runs without sudo and stores the appliance outside Git.
+
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+
+VM_NAME=${RAINFALL_VM_NAME:-RainFall}
+OVA_PATH=${RAINFALL_OVA_PATH:-"$HOME/Downloads/RainFall_v2.ova"}
+HOST_IP=${RAINFALL_HOST_IP:-127.0.0.1}
+HOST_PORT=${RAINFALL_HOST_PORT:-4242}
+GUEST_PORT=${RAINFALL_GUEST_PORT:-4242}
+SSH_USER=${RAINFALL_SSH_USER:-level00}
+PF_NAME=${RAINFALL_PF_NAME:-rainfall-ssh}
+DEFAULT_OVA_URL=https://cdn.intra.42.fr/isos/RainFall_v2.ova
+
+if [ -f "$REPO_ROOT/RainFall_iso.txt" ]; then
+    OVA_URL=$(sed -n '1p' "$REPO_ROOT/RainFall_iso.txt")
+else
+    OVA_URL=$DEFAULT_OVA_URL
+fi
+
+usage()
+{
+    cat <<EOF
+Usage: $(basename "$0") <command> [arguments]
+
+Commands:
+  doctor              Check VirtualBox, SSH and local configuration
+  download [path]     Download the official OVA outside the repository
+  import [path]       Import the OVA as "$VM_NAME"
+  setup [path]        Download if needed, import and configure SSH
+  start               Start the VM in headless mode
+  gui                 Start or show the VM with the VirtualBox GUI
+  stop                Request a clean ACPI shutdown
+  restart             Cleanly stop, wait, then start headless
+  poweroff --force    Immediately power off the VM
+  status              Show VM and SSH status
+  ssh [command]       Connect, or run a command, as $SSH_USER
+  snapshot [name]     Take a VirtualBox snapshot
+  info                Show complete VirtualBox information
+  help                Show this help
+
+Environment overrides:
+  RAINFALL_VM_NAME, RAINFALL_OVA_PATH, RAINFALL_HOST_IP,
+  RAINFALL_HOST_PORT, RAINFALL_GUEST_PORT, RAINFALL_SSH_USER
+
+No command requires sudo. The default login is level00 / level00.
+EOF
+}
+
+die()
+{
+    printf 'error: %s\n' "$*" >&2
+    exit 1
+}
+
+need()
+{
+    command -v "$1" >/dev/null 2>&1 || die "missing command: $1"
+}
+
+vm_exists()
+{
+    VBoxManage showvminfo "$VM_NAME" >/dev/null 2>&1
+}
+
+vm_state()
+{
+    VBoxManage showvminfo "$VM_NAME" --machinereadable 2>/dev/null |
+        sed -n 's/^VMState="\([^"]*\)"/\1/p'
+}
+
+download_ova()
+{
+    download_path=${1:-$OVA_PATH}
+    download_dir=$(dirname "$download_path")
+    mkdir -p "$download_dir"
+
+    if [ -s "$download_path" ]; then
+        printf 'OVA already present: %s\n' "$download_path"
+        return 0
+    fi
+
+    printf 'Downloading RainFall OVA to %s\n' "$download_path"
+    if command -v curl >/dev/null 2>&1; then
+        curl -L --fail --retry 5 -C - --progress-bar \
+            -o "$download_path" "$OVA_URL"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -c -O "$download_path" "$OVA_URL"
+    else
+        die "curl or wget is required to download the OVA"
+    fi
+}
+
+import_vm()
+{
+    import_path=${1:-$OVA_PATH}
+
+    if vm_exists; then
+        printf 'VM already imported: %s\n' "$VM_NAME"
+        return 0
+    fi
+
+    [ -s "$import_path" ] || die "OVA not found: $import_path (run: $(basename "$0") download)"
+    printf 'Importing %s as %s\n' "$import_path" "$VM_NAME"
+    VBoxManage import "$import_path" --vsys 0 --vmname "$VM_NAME"
+}
+
+has_ssh_forward()
+{
+    VBoxManage showvminfo "$VM_NAME" --machinereadable 2>/dev/null |
+        grep -E "^Forwarding\([0-9]+\)=\"[^,]+,tcp,[^,]*,${HOST_PORT},[^,]*,${GUEST_PORT}\"" \
+        >/dev/null 2>&1
+}
+
+configure_ssh_forward()
+{
+    vm_exists || die "VM not imported (run: $(basename "$0") setup)"
+
+    if has_ssh_forward; then
+        printf 'SSH forwarding already configured: %s:%s -> guest:%s\n' \
+            "$HOST_IP" "$HOST_PORT" "$GUEST_PORT"
+        return 0
+    fi
+
+    pf_rule="$PF_NAME,tcp,$HOST_IP,$HOST_PORT,,$GUEST_PORT"
+    current_state=$(vm_state)
+    case "$current_state" in
+        running)
+            VBoxManage controlvm "$VM_NAME" natpf1 "$pf_rule"
+            ;;
+        poweroff)
+            VBoxManage modifyvm "$VM_NAME" --natpf1 "$pf_rule"
+            ;;
+        *)
+            die "cannot configure networking while VM state is: $current_state"
+            ;;
+    esac
+    printf 'SSH forwarding configured: %s:%s -> guest:%s\n' \
+        "$HOST_IP" "$HOST_PORT" "$GUEST_PORT"
+}
+
+start_vm()
+{
+    vm_exists || die "VM not imported (run: $(basename "$0") setup)"
+    current_state=$(vm_state)
+    if [ "$current_state" = running ]; then
+        printf 'VM %s is already running\n' "$VM_NAME"
+        return 0
+    fi
+    [ "$current_state" = poweroff ] || die "VM cannot start from state: $current_state"
+    configure_ssh_forward
+    VBoxManage startvm "$VM_NAME" --type headless
+}
+
+stop_vm()
+{
+    vm_exists || die "VM not imported"
+    current_state=$(vm_state)
+    if [ "$current_state" = poweroff ]; then
+        printf 'VM %s is already stopped\n' "$VM_NAME"
+        return 0
+    fi
+    [ "$current_state" = running ] || die "VM cannot cleanly stop from state: $current_state"
+    VBoxManage controlvm "$VM_NAME" acpipowerbutton
+    printf 'Clean shutdown requested for %s\n' "$VM_NAME"
+}
+
+wait_for_poweroff()
+{
+    wait_count=0
+    while [ "$wait_count" -lt 60 ]; do
+        [ "$(vm_state)" = poweroff ] && return 0
+        wait_count=$((wait_count + 1))
+        sleep 1
+    done
+    return 1
+}
+
+wait_for_ssh()
+{
+    if ! command -v nc >/dev/null 2>&1; then
+        sleep 5
+        return 0
+    fi
+
+    ssh_wait_count=0
+    while [ "$ssh_wait_count" -lt 60 ]; do
+        if nc -z -w 1 "$HOST_IP" "$HOST_PORT" >/dev/null 2>&1; then
+            return 0
+        fi
+        ssh_wait_count=$((ssh_wait_count + 1))
+        sleep 1
+    done
+    return 1
+}
+
+show_status()
+{
+    if ! vm_exists; then
+        printf 'VM: not imported\n'
+        printf 'OVA: %s\n' "$OVA_PATH"
+        return 1
+    fi
+
+    current_state=$(vm_state)
+    printf 'VM: %s\nState: %s\n' "$VM_NAME" "$current_state"
+    printf 'SSH: %s@%s -p %s\n' "$SSH_USER" "$HOST_IP" "$HOST_PORT"
+    if command -v nc >/dev/null 2>&1 && nc -z -w 1 "$HOST_IP" "$HOST_PORT" >/dev/null 2>&1; then
+        printf 'SSH port: ready\n'
+    else
+        printf 'SSH port: unavailable\n'
+    fi
+}
+
+doctor()
+{
+    printf 'RainFall VM doctor\n'
+    if command -v VBoxManage >/dev/null 2>&1; then
+        printf '[ok] VirtualBox: %s\n' "$(VBoxManage --version)"
+    else
+        printf '[missing] VBoxManage\n'
+    fi
+    if command -v ssh >/dev/null 2>&1; then
+        printf '[ok] SSH client\n'
+    else
+        printf '[missing] SSH client\n'
+    fi
+    if [ -s "$OVA_PATH" ]; then
+        printf '[ok] OVA: %s\n' "$OVA_PATH"
+    else
+        printf '[missing] OVA: %s\n' "$OVA_PATH"
+    fi
+    if command -v VBoxManage >/dev/null 2>&1 && vm_exists; then
+        printf '[ok] VM: %s (%s)\n' "$VM_NAME" "$(vm_state)"
+        if has_ssh_forward; then
+            printf '[ok] SSH forwarding on port %s\n' "$HOST_PORT"
+        else
+            printf '[missing] SSH forwarding on port %s\n' "$HOST_PORT"
+        fi
+    else
+        printf '[missing] VM: %s\n' "$VM_NAME"
+    fi
+}
+
+command_name=${1:-help}
+[ "$#" -eq 0 ] || shift
+
+case "$command_name" in
+    help|-h|--help|doctor|download)
+        ;;
+    *)
+        need VBoxManage
+        ;;
+esac
+
+case "$command_name" in
+    help|-h|--help)
+        usage
+        ;;
+    doctor)
+        doctor
+        ;;
+    download)
+        download_ova "${1:-$OVA_PATH}"
+        ;;
+    import)
+        import_vm "${1:-$OVA_PATH}"
+        configure_ssh_forward
+        ;;
+    setup)
+        setup_path=${1:-$OVA_PATH}
+        [ -s "$setup_path" ] || download_ova "$setup_path"
+        import_vm "$setup_path"
+        configure_ssh_forward
+        ;;
+    start)
+        start_vm
+        ;;
+    gui)
+        vm_exists || die "VM not imported (run: $(basename "$0") setup)"
+        if [ "$(vm_state)" = poweroff ]; then
+            configure_ssh_forward
+            VBoxManage startvm "$VM_NAME" --type gui
+        elif command -v VirtualBox >/dev/null 2>&1; then
+            VirtualBox --startvm "$VM_NAME" </dev/null >/dev/null 2>&1 &
+        else
+            die "VirtualBox GUI command not found"
+        fi
+        ;;
+    stop)
+        stop_vm
+        ;;
+    restart)
+        stop_vm
+        wait_for_poweroff || die "shutdown timed out; use poweroff --force if necessary"
+        start_vm
+        ;;
+    poweroff)
+        [ "${1:-}" = --force ] || die "poweroff is immediate; confirm with: poweroff --force"
+        vm_exists || die "VM not imported"
+        if [ "$(vm_state)" = poweroff ]; then
+            printf 'VM %s is already stopped\n' "$VM_NAME"
+        else
+            VBoxManage controlvm "$VM_NAME" poweroff
+        fi
+        ;;
+    status)
+        show_status
+        ;;
+    ssh)
+        need ssh
+        vm_exists || die "VM not imported (run: $(basename "$0") setup)"
+        [ "$(vm_state)" = running ] || start_vm
+        wait_for_ssh || die "SSH did not become ready within 60 seconds"
+        ssh -p "$HOST_PORT" "$SSH_USER@$HOST_IP" "$@"
+        ;;
+    snapshot)
+        vm_exists || die "VM not imported"
+        snapshot_name=${1:-"snapshot-$(date +%Y%m%d-%H%M%S)"}
+        VBoxManage snapshot "$VM_NAME" take "$snapshot_name"
+        ;;
+    info)
+        vm_exists || die "VM not imported"
+        VBoxManage showvminfo "$VM_NAME"
+        ;;
+    *)
+        usage >&2
+        die "unknown command: $command_name"
+        ;;
+esac
+

@@ -137,6 +137,32 @@ flowchart LR
 | Automation | Shell scripting and payload generation |
 | Infrastructure | Linux, SSH and VirtualBox |
 
+## Local VM helper
+
+The repository includes a small, sudo-free VirtualBox CLI for managing the
+official RainFall appliance. The OVA and all VirtualBox disks stay outside the
+repository and are ignored by Git.
+
+```bash
+# Check the local environment
+./scripts/rainfall-vm doctor
+
+# Download, import and configure the official appliance
+./scripts/rainfall-vm setup
+
+# Start headless and connect to level00
+./scripts/rainfall-vm start
+./scripts/rainfall-vm ssh
+
+# Inspect or stop the VM
+./scripts/rainfall-vm status
+./scripts/rainfall-vm stop
+```
+
+The default SSH endpoint is `level00@127.0.0.1:4242`; both the initial username
+and password are `level00`. Run `./scripts/rainfall-vm help` for every command
+and the supported environment overrides.
+
 ## Deliverables
 
 The project specification requires each solved level to be documented independently so that the reasoning remains easy to review and present:

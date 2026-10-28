@@ -1,0 +1,11 @@
+# RainFall appliances and VirtualBox disks must never be committed.
+*.ova
+*.ovf
+*.vmdk
+*.vdi
+*.vbox
+*.vbox-prev
+
+# Optional local analysis files.
+.local/
+
