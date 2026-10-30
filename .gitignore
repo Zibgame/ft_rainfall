@@ -9,3 +9,6 @@
 # Optional local analysis files.
 .local/
 
+# Runtime SSHFS mount shared with the local appliance.
+/shared
+

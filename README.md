@@ -154,14 +154,26 @@ repository and are ignored by Git.
 ./scripts/rainfall-vm start
 ./scripts/rainfall-vm ssh
 
+# The bidirectional host/guest directory is mounted automatically
+cd shared                 # host
+cd ~/shared               # VM
+
 # Inspect or stop the VM
 ./scripts/rainfall-vm status
 ./scripts/rainfall-vm stop
 ```
 
-The default SSH endpoint is `level00@127.0.0.1:4242`; both the initial username
-and password are `level00`. Run `./scripts/rainfall-vm help` for every command
-and the supported environment overrides.
+The local SSH endpoint is `level00@127.0.0.1:4243` (the guest still listens on
+port `4242`); both the initial username and password are `level00`. The host
+port differs because port 4242 is reserved by a service on the 42 workstation.
+The first login key is already installed, so `ssh rainfall` also connects
+directly. Run `./scripts/rainfall-vm help` for every command and override.
+
+The workstation also has `pwndbg` with an Intel/Dracula configuration,
+Binary Ninja Free 6.0, and Ghidra 12.2 with a private JDK 25 runtime. Launch
+them with `gdb`, `binaryninja`, and `ghidra`; no sudo installation is needed.
+The appliance itself already provides pwndbg under `/opt/pwndbg`, and the
+`level00` GDB configuration uses the same Dracula theme.
 
 ## Deliverables
 

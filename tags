@@ -1,0 +1,30 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/sgoinfre/goinfre/Perso/zcadinot/.home/.Documents/Projects/ft_rainfall/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	//
+AUTH_TIMEOUT	shared/level00/case.c	/^#define AUTH_TIMEOUT /;"	d	file:
+LOG_SIZE	shared/level00/case.c	/^#define LOG_SIZE /;"	d	file:
+MAX_SESSIONS	shared/level00/case.c	/^#define MAX_SESSIONS /;"	d	file:
+__anond523f31f0108	shared/level00/case.c	/^typedef struct {$/;"	s	file:
+active	shared/level00/case.c	/^    int active;$/;"	m	struct:__anond523f31f0108	typeref:typename:int	file:
+audit_log	shared/level00/case.c	/^static char audit_log[LOG_SIZE];$/;"	v	typeref:typename:char[]	file:
+auth_loop	shared/level00/case.c	/^static void auth_loop(void) {$/;"	f	typeref:typename:void	file:
+create_session	shared/level00/case.c	/^static int create_session(void) {$/;"	f	typeref:typename:int	file:
+created	shared/level00/case.c	/^    time_t created;$/;"	m	struct:__anond523f31f0108	typeref:typename:time_t	file:
+id	shared/level00/case.c	/^    int id;$/;"	m	struct:__anond523f31f0108	typeref:typename:int	file:
+init_sessions	shared/level00/case.c	/^static void init_sessions(void) {$/;"	f	typeref:typename:void	file:
+log_attempt	shared/level00/case.c	/^static void log_attempt(const char *user, int success) {$/;"	f	typeref:typename:void	file:
+main	shared/level00/case.c	/^int main(void) {$/;"	f	typeref:typename:int
+print_banner	shared/level00/case.c	/^static void print_banner(void) {$/;"	f	typeref:typename:void	file:
+session_count	shared/level00/case.c	/^static int session_count = 0;$/;"	v	typeref:typename:int	file:
+session_t	shared/level00/case.c	/^} session_t;$/;"	t	typeref:struct:__anond523f31f0108	file:
+sessions	shared/level00/case.c	/^static session_t sessions[MAX_SESSIONS];$/;"	v	typeref:typename:session_t[]	file:
+token	shared/level00/case.c	/^    char token[32];$/;"	m	struct:__anond523f31f0108	typeref:typename:char[32]	file:
+verify_credentials	shared/level00/case.c	/^static int verify_credentials(const char *input) {$/;"	f	typeref:typename:int	file:
