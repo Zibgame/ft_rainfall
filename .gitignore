@@ -8,6 +8,11 @@
 
 # Optional local analysis files.
 .local/
+tags
+*.core
+core
+__pycache__/
+*.py[cod]
 
 # Runtime SSHFS mount shared with the local appliance.
 /shared

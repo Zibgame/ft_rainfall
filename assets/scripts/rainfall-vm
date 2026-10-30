@@ -6,7 +6,7 @@
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
-REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 
 VM_NAME=${RAINFALL_VM_NAME:-RainFall}
 STORAGE_ROOT=${RAINFALL_STORAGE_ROOT:-"/sgoinfre/goinfre/Perso/$(id -un)"}
@@ -20,10 +20,11 @@ PF_NAME=${RAINFALL_PF_NAME:-rainfall-ssh}
 SHARED_DIR=${RAINFALL_SHARED_DIR:-"$REPO_ROOT/shared"}
 SHARED_MOUNT=${RAINFALL_SHARED_MOUNT:-"/tmp/$(id -un)-rainfall-shared"}
 SSHFS_BIN=${RAINFALL_SSHFS_BIN:-"$STORAGE_ROOT/.home/.Apps/bin/sshfs"}
+OVA_URL_FILE=${RAINFALL_OVA_URL_FILE:-"$REPO_ROOT/assets/rainfall-ova-url.txt"}
 DEFAULT_OVA_URL=https://cdn.intra.42.fr/isos/RainFall_v2.ova
 
-if [ -f "$REPO_ROOT/RainFall_iso.txt" ]; then
-    OVA_URL=$(sed -n '1p' "$REPO_ROOT/RainFall_iso.txt")
+if [ -s "$OVA_URL_FILE" ]; then
+    OVA_URL=$(sed -n '1p' "$OVA_URL_FILE")
 else
     OVA_URL=$DEFAULT_OVA_URL
 fi
@@ -44,7 +45,8 @@ Commands:
   restart             Cleanly stop, wait, then start headless
   poweroff --force    Immediately power off the VM
   status              Show VM and SSH status
-  ssh [command]       Connect, or run a command, as $SSH_USER
+  ssh [level] [cmd]   Choose a level and connect using the preceding flag
+  ssh --level N [cmd]  Same, with an explicit level (for example: 01)
   mount               Mount the VM's ~/shared directory into ./shared
   umount              Unmount the shared directory
   snapshot [name]     Take a VirtualBox snapshot
@@ -55,7 +57,7 @@ Environment overrides:
   RAINFALL_VM_NAME, RAINFALL_OVA_PATH, RAINFALL_HOST_IP,
   RAINFALL_VM_BASE, RAINFALL_HOST_PORT, RAINFALL_GUEST_PORT,
   RAINFALL_SSH_USER, RAINFALL_SHARED_DIR, RAINFALL_SHARED_MOUNT,
-  RAINFALL_SSHFS_BIN
+  RAINFALL_SSHFS_BIN, RAINFALL_OVA_URL_FILE
 
 No command requires sudo. The default login is level00 / level00.
 EOF
@@ -70,6 +72,109 @@ die()
 need()
 {
     command -v "$1" >/dev/null 2>&1 || die "missing command: $1"
+}
+
+normalise_level()
+{
+    raw_level=${1#level}
+    case "$raw_level" in
+        ''|*[!0-9]*)
+            return 1
+            ;;
+    esac
+
+    # Remove leading zeroes before using the value in shell arithmetic.
+    level_number=$(printf '%s\n' "$raw_level" | sed 's/^0*//')
+    [ -n "$level_number" ] || level_number=0
+    [ "$level_number" -le 99 ] || return 1
+    printf 'level%02d\n' "$level_number"
+}
+
+level_password()
+{
+    level_user=$1
+    level_number=${level_user#level}
+    level_number=$(printf '%s\n' "$level_number" | sed 's/^0*//')
+    [ -n "$level_number" ] || level_number=0
+
+    if [ "$level_number" -eq 0 ]; then
+        printf '%s' level00
+        return 0
+    fi
+
+    previous_number=$((level_number - 1))
+    previous_level=$(printf 'level%02d' "$previous_number")
+    flag_path=$REPO_ROOT/$previous_level/flag
+    [ -f "$flag_path" ] || \
+        die "missing credential for $level_user: $previous_level/flag"
+    [ -s "$flag_path" ] || \
+        die "empty credential for $level_user: $previous_level/flag"
+    tr -d '\r\n' < "$flag_path"
+}
+
+show_available_levels()
+{
+    printf 'Available levels: level00'
+    for flag_path in "$REPO_ROOT"/level[0-9][0-9]/flag; do
+        [ -f "$flag_path" ] || continue
+        previous_level=${flag_path%/flag}
+        previous_level=${previous_level##*/}
+        previous_number=${previous_level#level}
+        previous_number=$(printf '%s\n' "$previous_number" | sed 's/^0*//')
+        [ -n "$previous_number" ] || previous_number=0
+        next_number=$((previous_number + 1))
+        [ "$next_number" -le 99 ] || continue
+        printf ' level%02d' "$next_number"
+    done
+    printf '\n'
+}
+
+choose_ssh_level()
+{
+    requested_level=${1:-}
+    if [ -z "$requested_level" ] && [ -t 0 ]; then
+        show_available_levels >&2
+        printf 'Level [%s]: ' "$SSH_USER" >&2
+        IFS= read -r requested_level || true
+    fi
+    [ -n "$requested_level" ] || requested_level=$SSH_USER
+
+    SELECTED_SSH_USER=$(normalise_level "$requested_level") || \
+        die "invalid level: $requested_level (expected 00, 01, level02, ...)"
+    SELECTED_SSH_PASSWORD=$(level_password "$SELECTED_SSH_USER")
+}
+
+cleanup_askpass()
+{
+    [ -z "${ASKPASS_DIR:-}" ] || rm -rf -- "$ASKPASS_DIR"
+}
+
+ssh_to_level()
+{
+    level_user=$1
+    level_password_value=$2
+    shift 2
+
+    need setsid
+    ASKPASS_DIR=$(mktemp -d "${TMPDIR:-/tmp}/rainfall-askpass.XXXXXX") || \
+        die "could not create the temporary SSH credential helper"
+    chmod 700 "$ASKPASS_DIR"
+    printf '%s' "$level_password_value" > "$ASKPASS_DIR/password"
+    chmod 600 "$ASKPASS_DIR/password"
+    cat > "$ASKPASS_DIR/askpass" <<'EOF'
+#!/bin/sh
+cat "$RAINFALL_ASKPASS_FILE"
+EOF
+    chmod 700 "$ASKPASS_DIR/askpass"
+    trap cleanup_askpass 0
+    trap 'exit 130' HUP INT TERM
+
+    printf 'Connecting as %s (credential loaded locally)\n' "$level_user"
+    DISPLAY=${DISPLAY:-rainfall:0} \
+    SSH_ASKPASS=$ASKPASS_DIR/askpass \
+    SSH_ASKPASS_REQUIRE=force \
+    RAINFALL_ASKPASS_FILE=$ASKPASS_DIR/password \
+        setsid -w ssh -p "$HOST_PORT" "$level_user@$HOST_IP" "$@"
 }
 
 vm_exists()
@@ -383,7 +488,20 @@ case "$command_name" in
         vm_exists || die "VM not imported (run: $(basename "$0") setup)"
         [ "$(vm_state)" = running ] || start_vm
         wait_for_ssh || die "SSH did not become ready within 60 seconds"
-        ssh -p "$HOST_PORT" "$SSH_USER@$HOST_IP" "$@"
+        requested_level=
+        case "${1:-}" in
+            --level)
+                [ "$#" -ge 2 ] || die "--level requires a level number"
+                requested_level=$2
+                shift 2
+                ;;
+            level[0-9]*|[0-9]*)
+                requested_level=$1
+                shift
+                ;;
+        esac
+        choose_ssh_level "$requested_level"
+        ssh_to_level "$SELECTED_SSH_USER" "$SELECTED_SSH_PASSWORD" "$@"
         ;;
     mount)
         vm_exists || die "VM not imported (run: $(basename "$0") setup)"

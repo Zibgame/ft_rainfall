@@ -137,6 +137,26 @@ flowchart LR
 | Automation | Shell scripting and payload generation |
 | Infrastructure | Linux, SSH and VirtualBox |
 
+## Repository layout
+
+```text
+ft_rainfall/
+├── assets/                     # Static project files
+│   ├── rainfall-demo.gif       # README illustration
+│   ├── rainfall-ova-url.txt    # Official appliance URL
+│   ├── subject.pdf             # Original project subject
+│   └── scripts/
+│       └── rainfall-vm         # VirtualBox and SSH helper
+└── levelXX/
+    ├── flag                    # Credential unlocked by this level
+    └── resources/
+        ├── walkthrough.md      # Reproducible analysis
+        └── poc.py              # Proof of concept or exploit
+```
+
+Each level is self-contained. Static files and project tooling are grouped in
+`assets/`. The original subject is available [here](assets/subject.pdf).
+
 ## Local VM helper
 
 The repository includes a small, sudo-free VirtualBox CLI for managing the
@@ -145,29 +165,39 @@ repository and are ignored by Git.
 
 ```bash
 # Check the local environment
-./scripts/rainfall-vm doctor
+./assets/scripts/rainfall-vm doctor
 
 # Download, import and configure the official appliance
-./scripts/rainfall-vm setup
+./assets/scripts/rainfall-vm setup
 
-# Start headless and connect to level00
-./scripts/rainfall-vm start
-./scripts/rainfall-vm ssh
+# Start headless and choose a level (its password is read locally)
+./assets/scripts/rainfall-vm start
+./assets/scripts/rainfall-vm ssh
+
+# Or select it directly; level01 uses level00/flag
+./assets/scripts/rainfall-vm ssh level01
+./assets/scripts/rainfall-vm ssh --level 02
 
 # The bidirectional host/guest directory is mounted automatically
 cd shared                 # host
 cd ~/shared               # VM
 
 # Inspect or stop the VM
-./scripts/rainfall-vm status
-./scripts/rainfall-vm stop
+./assets/scripts/rainfall-vm status
+./assets/scripts/rainfall-vm stop
 ```
 
-The local SSH endpoint is `level00@127.0.0.1:4243` (the guest still listens on
-port `4242`); both the initial username and password are `level00`. The host
-port differs because port 4242 is reserved by a service on the 42 workstation.
-The first login key is already installed, so `ssh rainfall` also connects
-directly. Run `./scripts/rainfall-vm help` for every command and override.
+The guest still listens on port `4242`, forwarded locally to `127.0.0.1:4243`.
+With no argument, `rainfall-vm ssh` interactively proposes every level whose
+credential is available. To enter `levelXX`, the helper automatically reads
+`level(X-1)/flag`; `level00` uses the initial `level00` password. Credentials
+are supplied through a private temporary SSH askpass helper and are never put
+on the command line. The first login key is already installed, so `ssh
+rainfall` also connects directly to `level00`. Run
+`./assets/scripts/rainfall-vm help` for every command and override.
+
+The appliance URL is read from `assets/rainfall-ova-url.txt`. A different file
+can be selected with `RAINFALL_OVA_URL_FILE=/path/to/url.txt`.
 
 The workstation also has `pwndbg` with an Intel/Dracula configuration,
 Binary Ninja Free 6.0, and Ghidra 12.2 with a private JDK 25 runtime. Launch
@@ -184,7 +214,8 @@ levelXX/
 ├── flag
 └── resources/
     ├── walkthrough.md
-    └── scripts and supporting material
+    ├── poc.py
+    └── supporting files when needed
 ```
 
 The `flag` file records proof of progression. The `resources/` directory contains the analysis, payload-generation scripts and any supporting files needed to reproduce the solution. Vulnerable binaries are intentionally excluded from the repository and are inspected exclusively inside the supplied virtual machine.
