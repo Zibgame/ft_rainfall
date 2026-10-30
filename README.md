@@ -40,6 +40,14 @@ This creates a complete security-audit loop: inspect an unknown binary, reconstr
 | **Environment** | Linux, SSH and VirtualBox |
 | **Key outcome** | A repeatable security analysis methodology |
 
+## Progress
+
+| Level | Status | Main technique | Documentation |
+| --- | --- | --- | --- |
+| `level00` | Completed | Stack buffer overflow and injected shellcode | [Walkthrough](level00/resources/walkthrough.md) |
+| `level01` | Completed | Stack buffer overflow and ret2win-style control-flow hijacking | [Walkthrough](level01/resources/walkthrough.md) |
+| `level02`–`level10` | Not documented yet | — | — |
+
 ## How the project works
 
 ```text
@@ -148,8 +156,11 @@ ft_rainfall/
 │   └── scripts/
 │       └── rainfall-vm         # VirtualBox and SSH helper
 └── levelXX/
-    ├── flag                    # Credential unlocked by this level
+    ├── flag                    # Credential, once the level is solved
     └── resources/
+        ├── program/            # Files copied from the appliance
+        │   ├── challenge       # Original ELF binary
+        │   └── challenge.c     # Matching C source
         ├── walkthrough.md      # Reproducible analysis
         └── poc.py              # Proof of concept or exploit
 ```
@@ -178,9 +189,8 @@ repository and are ignored by Git.
 ./assets/scripts/rainfall-vm ssh level01
 ./assets/scripts/rainfall-vm ssh --level 02
 
-# The bidirectional host/guest directory is mounted automatically
-cd shared                 # host
-cd ~/shared               # VM
+# The level00 VM share is mounted automatically on the host
+cd shared
 
 # Inspect or stop the VM
 ./assets/scripts/rainfall-vm status
@@ -211,14 +221,23 @@ The project specification requires each solved level to be documented independen
 
 ```text
 levelXX/
-├── flag
+├── flag                         # Added after solving the level
 └── resources/
-    ├── walkthrough.md
-    ├── poc.py
+    ├── program/
+    │   ├── challenge            # ELF copied from the VM
+    │   └── challenge.c          # Corresponding source
+    ├── walkthrough.md           # Analysis and reproduction steps
+    ├── poc.py                   # Exploit or proof of concept
     └── supporting files when needed
 ```
 
-The `flag` file records proof of progression. The `resources/` directory contains the analysis, payload-generation scripts and any supporting files needed to reproduce the solution. Vulnerable binaries are intentionally excluded from the repository and are inspected exclusively inside the supplied virtual machine.
+The `flag` file records proof of progression and is added only when the level
+has been solved. A level currently under investigation may therefore contain
+only `resources/`. The `program/` directory preserves the challenge binary and
+its matching C source as copied from the authorised appliance; their original
+names, such as `case` or `ono`, are kept. The rest of `resources/` contains the
+analysis, payload-generation scripts and supporting files needed to reproduce
+the solution.
 
 This separation keeps the repository focused on the **reasoning and reproducibility** of the work rather than distributing the challenge binaries themselves.
 
