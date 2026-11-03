@@ -46,7 +46,11 @@ This creates a complete security-audit loop: inspect an unknown binary, reconstr
 | --- | --- | --- | --- |
 | `level00` | Completed | Stack buffer overflow and injected shellcode | [Walkthrough](level00/resources/walkthrough.md) |
 | `level01` | Completed | Stack buffer overflow and ret2win-style control-flow hijacking | [Walkthrough](level01/resources/walkthrough.md) |
-| `level02`–`level10` | Not documented yet | — | — |
+| `level02` | Completed | Off-by-one overwrite of the saved RBP, two-stage stack pivot and shellcode execution | [Walkthrough](level02/resources/walkthrough.md) |
+| `level03` | Completed | ret2libc ROP chain to bypass NX, with `setreuid` before the shell | [Walkthrough](level03/resources/walkthrough.md) |
+| `level04` | Completed | Format-string writes, saved-RBP hijack, stack pivot into a ROP chain and `execv("/bin/sh", "-p")` | [Walkthrough](level04/resources/walkthrough.md) |
+| `level05` | In progress | Reconnaissance done (NX on, no canary, no PIE) | [Setup notes](level05/resources/SETUP.md) |
+| `level06`–`level10` | Not documented yet | — | — |
 
 ## How the project works
 
@@ -162,7 +166,8 @@ ft_rainfall/
         │   ├── challenge       # Original ELF binary
         │   └── challenge.c     # Matching C source
         ├── walkthrough.md      # Reproducible analysis
-        └── poc.py              # Proof of concept or exploit
+        ├── poc.py              # Proof of concept or exploit
+        └── SETUP.md            # Recon notes while a level is in progress
 ```
 
 Each level is self-contained. Static files and project tooling are grouped in
@@ -228,6 +233,7 @@ levelXX/
     │   └── challenge.c          # Corresponding source
     ├── walkthrough.md           # Analysis and reproduction steps
     ├── poc.py                   # Exploit or proof of concept
+    ├── SETUP.md                 # Recon notes while a level is in progress
     └── supporting files when needed
 ```
 
