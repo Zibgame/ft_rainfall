@@ -50,7 +50,7 @@ This creates a complete security-audit loop: inspect an unknown binary, reconstr
 | `level03` | Completed | ret2libc ROP chain to bypass NX, with `setreuid` before the shell | [Walkthrough](level03/resources/walkthrough.md) |
 | `level04` | Completed | Format-string writes, saved-RBP hijack, stack pivot into a ROP chain and `execv("/bin/sh", "-p")` | [Walkthrough](level04/resources/walkthrough.md) |
 | `level05` | Completed | ret2libc ROP chain to bypass NX, with `setreuid` before the shell | [Walkthrough](level05/resources/walkthrough.md) |
-| `level06` | In progress | Recon pending | — |
+| `level06` | In progress | Recon done (NX on, **stack canary on**, binary-only) | [Setup notes](level06/resources/SETUP.md) |
 | `level07`–`level10` | Not documented yet | — | — |
 
 ## How the project works
