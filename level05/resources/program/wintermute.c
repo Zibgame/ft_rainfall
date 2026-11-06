@@ -34,6 +34,8 @@ static void init_matrix(void)
     }
 }
 
+
+// sa sert a rien en gros 
 static void print_banner(void)
 {
     printf("\033[0;34m");
